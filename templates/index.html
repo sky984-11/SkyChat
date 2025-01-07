@@ -192,11 +192,16 @@
 
         // 从localStorage加载头像，若没有则随机选择
         let avatar = localStorage.getItem('avatar');
-        console.log(avatar)
-        if (!avatar.startsWith("static")) {
+        if(avatar == null){
             avatar = generateAvatar();
             localStorage.setItem('avatar', avatar); // 将头像保存到localStorage
+        }else{
+            if(!avatar.startsWith("static")){
+                avatar = generateAvatar();
+                localStorage.setItem('avatar', avatar); // 将头像保存到localStorage
+            }
         }
+
 
         // 未读消息计数
         let unreadMessagesCount = 0;
@@ -225,6 +230,7 @@
         // 发送消息
         function sendMessage() {
             const message = messageInput.value;
+            console.log(message)
             if (message) {
                 const messageData = {
                     message,
