@@ -5,6 +5,7 @@
 用到的技术栈大部分都是flask，现支持如下:
 
 - 多用户实时聊天
+- 消息提醒功能
 
 
 
@@ -12,7 +13,7 @@
 
 ```sh
 pip3 install flask_socketio flask eventlet
-nohup python app.py &
+nohup python3 app.py &
 ```
 
 open `http://127.0.0.1:8888` to play with skyChat.

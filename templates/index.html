@@ -160,7 +160,6 @@
     </style>
 
 </head>
-
 <body>
 
     <div id="chat-container">
@@ -186,7 +185,6 @@
         const chatBox = document.getElementById('chat-box');
 
         // 随机头像列表
-        // 头像生成器 - 使用 1 至 70 的数字生成头像
         function generateAvatar() {
             const randomId = Math.floor(Math.random() * 70) + 1;
             return `https://i.pravatar.cc/150?img=${randomId}`;
@@ -199,9 +197,11 @@
             localStorage.setItem('avatar', avatar); // 将头像保存到localStorage
         }
 
+        // 未读消息计数
+        let unreadMessagesCount = 0;
+
         // 显示/隐藏表情选择器
         emojiButton.onclick = function () {
-            // 切换表情选择器的显示和隐藏
             const currentDisplay = emojiPicker.style.display;
             emojiPicker.style.display = (currentDisplay === 'block' || currentDisplay === '') ? 'none' : 'block';
         };
@@ -209,8 +209,8 @@
         // 当选择表情时，将表情插入到输入框中
         emojiPicker.addEventListener('emoji-click', event => {
             const emoji = event.detail.unicode;
-            messageInput.value += emoji; // 将选中的表情插入到输入框中
-            emojiPicker.style.display = 'none'; // 隐藏表情选择器
+            messageInput.value += emoji;
+            emojiPicker.style.display = 'none';
         });
 
         // 格式化时间
@@ -228,7 +228,8 @@
                 const messageData = {
                     message,
                     time: formatTime(),
-                    avatar: avatar // 使用缓存的头像
+                    avatar: avatar,
+                    sender: true  // 当前消息是发送者的消息
                 };
                 socket.emit('send_message', messageData);
                 messageInput.value = ''; // 清空输入框
@@ -246,14 +247,11 @@
         // 点击发送按钮时发送消息
         sendButton.onclick = sendMessage;
 
-        // 用于存储未读消息计数
-        let unreadMessagesCount = 0;
-
         // 接收消息并展示
         socket.on('receive_message', function (data) {
             const newMessage = document.createElement('div');
             newMessage.classList.add('message');
-            newMessage.classList.add('sender');
+            newMessage.classList.add(data.sender ? 'sender' : 'receiver'); // 根据 sender 字段确定样式
 
             // 添加头像
             const avatarImg = document.createElement('img');
@@ -274,24 +272,23 @@
             newMessage.appendChild(timeText);
 
             chatBox.appendChild(newMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;  // 滚动到底部
+            chatBox.scrollTop = chatBox.scrollHeight; // 滚动到底部
 
             // 更新未读消息计数
-            unreadMessagesCount++;
+            if (document.hidden) {
+                unreadMessagesCount++;
+                document.title = `(${unreadMessagesCount}) SkyChat`;  // 标题显示未读消息数量
+            }
+        });
 
-            // 更新网页标题，显示小红点计数器
-            document.title = `(${unreadMessagesCount}) SkyChat`;
-
-            // 清除计数
-            document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) {
-                    unreadMessagesCount = 0;
-                    document.title = 'SkyChat'; // 恢复正常标题
-                }
-            });
+        // 页面可见时清除未读消息计数
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                unreadMessagesCount = 0;
+                document.title = 'SkyChat';  // 恢复正常标题
+            }
         });
     </script>
 
 </body>
-
 </html>
