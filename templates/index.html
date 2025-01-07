@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>skyChat</title>
+    <title>SkyChat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
     <style>
@@ -246,6 +246,9 @@
         // 点击发送按钮时发送消息
         sendButton.onclick = sendMessage;
 
+        // 用于存储未读消息计数
+        let unreadMessagesCount = 0;
+
         // 接收消息并展示
         socket.on('receive_message', function (data) {
             const newMessage = document.createElement('div');
@@ -272,9 +275,22 @@
 
             chatBox.appendChild(newMessage);
             chatBox.scrollTop = chatBox.scrollHeight;  // 滚动到底部
+
+            // 更新未读消息计数
+            unreadMessagesCount++;
+
+            // 更新网页标题，显示小红点计数器
+            document.title = `(${unreadMessagesCount}) SkyChat`;
+
+            // 清除计数
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    unreadMessagesCount = 0;
+                    document.title = 'SkyChat'; // 恢复正常标题
+                }
+            });
         });
     </script>
-
 
 </body>
 
