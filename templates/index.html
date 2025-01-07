@@ -230,7 +230,7 @@
                     message,
                     time: formatTime(),
                     avatar: avatar,
-                    sender: true  // 当前消息是发送者的消息
+                    sender: false  // 当前消息是发送者的消息
                 };
                 socket.emit('send_message', messageData);
                 messageInput.value = ''; // 清空输入框
