@@ -18,5 +18,9 @@ nohup python3 app.py &
 
 open `http://127.0.0.1:8888` to play with skyChat.
 
-![image](https://github.com/user-attachments/assets/7114f545-91ad-4466-ab6d-1870dbfdc29d)
+![image](https://github.com/user-attachments/assets/5ecb76b6-df32-4a86-b8db-7a84952da58b)
+
+
+![image](https://github.com/user-attachments/assets/3fe7dc91-b080-44d0-8d39-acb7ef1ba2df)
+
 
