@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>skyChat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+    <style>
+        /* 页面背景 */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 背景图像并虚化 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('static/images/images.jpeg');
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px);
+            /* 虚化效果 */
+            z-index: -1;
+            /* 使背景图层位于所有内容下方 */
+        }
+
+        /* 聊天窗口 */
+        #chat-container {
+            background: rgba(255, 255, 255, 0.8);
+            /* 背景为半透明 */
+            border-radius: 10px;
+            width: 700px;
+            height: 500px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 聊天消息框 */
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* 输入框区域 */
+        #input-container {
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* 输入框 */
+        #message-input {
+            width: 75%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #message-input:focus {
+            border-color: #2575fc;
+        }
+
+        /* 发送按钮 */
+        #send-button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #2575fc;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        #send-button:hover {
+            background-color: #1f66d1;
+        }
+
+        /* 表情按钮 */
+        #emoji-button {
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            margin-right: 10px;
+            color: #2575fc;
+        }
+
+        /* 消息样式 */
+        .message {
+            background: #f0f0f0;
+            /* 默认的消息背景色 */
+            color: #000;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            /* 轻微阴影 */
+        }
+
+        .message.sender {
+            background: #3a7c3a;
+            /* 用户消息背景，绿色调 */
+            color: #fff;
+            align-self: flex-end;
+        }
+
+        .message.receiver {
+            background: #f0f0f0;
+            /* 对方消息背景，浅灰色 */
+            color: #333;
+            align-self: flex-start;
+        }
+
+        .message .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        /* 表情选择器 */
+        #emoji-picker {
+            position: absolute;
+            display: none;
+            bottom: 70px;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div id="chat-container">
+        <div id="chat-box"></div>
+        <div id="input-container">
+            <button id="emoji-button">😊</button>
+            <input type="text" id="message-input" placeholder="输入消息...">
+            <button id="send-button">发送</button>
+        </div>
+        <!-- 表情选择器 -->
+        <emoji-picker id="emoji-picker"></emoji-picker>
+    </div>
+
+    <script>
+        // 创建Socket连接
+        const socket = io();
+
+        // 获取 DOM 元素
+        const messageInput = document.getElementById('message-input');
+        const emojiButton = document.getElementById('emoji-button');
+        const emojiPicker = document.getElementById('emoji-picker');
+        const sendButton = document.getElementById('send-button');
+        const chatBox = document.getElementById('chat-box');
+
+        // 随机头像列表
+        // 头像生成器 - 使用 1 至 70 的数字生成头像
+        function generateAvatar() {
+            const randomId = Math.floor(Math.random() * 70) + 1;
+            return `https://i.pravatar.cc/150?img=${randomId}`;
+        }
+
+        // 从localStorage加载头像，若没有则随机选择
+        let avatar = localStorage.getItem('avatar');
+        if (!avatar) {
+            avatar = generateAvatar();
+            localStorage.setItem('avatar', avatar); // 将头像保存到localStorage
+        }
+
+        // 显示/隐藏表情选择器
+        emojiButton.onclick = function () {
+            // 切换表情选择器的显示和隐藏
+            const currentDisplay = emojiPicker.style.display;
+            emojiPicker.style.display = (currentDisplay === 'block' || currentDisplay === '') ? 'none' : 'block';
+        };
+
+        // 当选择表情时，将表情插入到输入框中
+        emojiPicker.addEventListener('emoji-click', event => {
+            const emoji = event.detail.unicode;
+            messageInput.value += emoji; // 将选中的表情插入到输入框中
+            emojiPicker.style.display = 'none'; // 隐藏表情选择器
+        });
+
+        // 格式化时间
+        function formatTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const message = messageInput.value;
+            if (message) {
+                const messageData = {
+                    message,
+                    time: formatTime(),
+                    avatar: avatar // 使用缓存的头像
+                };
+                socket.emit('send_message', messageData);
+                messageInput.value = ''; // 清空输入框
+            }
+        }
+
+        // 按下回车键时发送消息
+        messageInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && !event.shiftKey) { // 按回车键发送消息，shift + 回车用于换行
+                event.preventDefault(); // 阻止默认行为
+                sendMessage();
+            }
+        });
+
+        // 点击发送按钮时发送消息
+        sendButton.onclick = sendMessage;
+
+        // 接收消息并展示
+        socket.on('receive_message', function (data) {
+            const newMessage = document.createElement('div');
+            newMessage.classList.add('message');
+            newMessage.classList.add('sender');
+
+            // 添加头像
+            const avatarImg = document.createElement('img');
+            avatarImg.classList.add('avatar');
+            avatarImg.src = data.avatar;
+            newMessage.appendChild(avatarImg);
+
+            // 添加消息内容
+            const messageText = document.createElement('span');
+            messageText.textContent = data.message;
+            newMessage.appendChild(messageText);
+
+            // 添加时间
+            const timeText = document.createElement('span');
+            timeText.textContent = ` (${data.time})`;
+            timeText.style.fontSize = '12px';
+            timeText.style.color = '#bbb';
+            newMessage.appendChild(timeText);
+
+            chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;  // 滚动到底部
+        });
+    </script>
+
+
+</body>
+
+</html>
